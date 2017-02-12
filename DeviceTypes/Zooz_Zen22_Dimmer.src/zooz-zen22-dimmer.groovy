@@ -1,0 +1,281 @@
+/**
+ *  Zooz Zen22 Dimmer Switch
+ *  Date: 2017-2-10
+ *  Copyright 2017, Don Caruana
+ *  Supported Command Classes
+ *  
+ *         Association v2
+ *         Association Group Information
+ *         Configuration (see Note2 below)
+ *         Device Reset Local
+ *         Manufacturer Specific v2
+ *         Powerlevel
+ *         Switch_all
+ *         Switch_multilevel
+ *         Version v2
+ *         ZWavePlus Info v2
+ *  
+ *   Parm Size Description               Value
+ *      1    1 Invert Switch             0 (Default)-Upper paddle turns light on, 1-Lower paddle turns light on
+ *      2    1 LED Indicator             0 (Default)-LED is on when light is OFF, 1-LED is on when light is ON
+ *   Note1: There is a bug in this device in that it reports the length of parameter 2 as 2, then only sends one value byte. 
+ *          Attempting to retrieve that parameter will result in this error: 
+ *          Exception 'java.lang.IndexOutOfBoundsException: toIndex = 4' encountered parsing 'cmd: 7006, payload: 02 02 00'
+ *          The toIndex indicates that it fails looking for the 4th byte of the payload (the 2nd byte is the length).
+ *          The simple workaround is to just look for a configuration report on parameter 2 and add a byte to the returned 
+ *          description. The 2nd byte is the least significant byte anyway and also is just not processed in the 
+ *          ConfigurationReport routine. Live logging will show the above error, but otherwise the device and handler work fine.
+ *   Note2: Configuration is not officially documented as a command class for this device but it is and must be available to 
+ *          use parameters
+ */
+metadata {
+	definition (name: "Zooz Zen22 Dimmer Switch", namespace: "doncaruana", author: "Don Caruana") {
+		capability "Switch Level"
+		capability "Switch"
+		capability "Polling"
+		capability "Refresh"
+		capability "Sensor"
+
+//zw:L type:1101 mfr:015D prod:0112 model:241C ver:20.16 zwv:4.05 lib:06 cc:5E,85,59,70,5A,72,73,27,26,86 role:05 ff:8600 ui:8600
+
+	fingerprint mfr:"015D", prod:"0112", model:"241C", deviceJoinName: "Zooz Zen22 Dimmer"
+    fingerprint deviceId:"0x1101", inClusters: "0x5E,0x59,0x85,0x70,0x5A,0x72,0x73,0x27,0x26,0x86"
+    fingerprint cc: "0x5E,0x59,0x85,0x70,0x5A,0x72,0x73,0x27,0x26,0x86", mfr:"015D", prod:"0112", model:"241C", deviceJoinName: "Zooz Zen22 Dimmer"
+	}
+
+	simulator {
+		status "on":  "command: 2003, payload: FF"
+		status "off": "command: 2003, payload: 00"
+		status "09%": "command: 2003, payload: 09"
+		status "10%": "command: 2003, payload: 0A"
+		status "33%": "command: 2003, payload: 21"
+		status "66%": "command: 2003, payload: 42"
+		status "99%": "command: 2003, payload: 63"
+
+		// reply messages
+		reply "2001FF,delay 5000,2602": "command: 2603, payload: FF"
+		reply "200100,delay 5000,2602": "command: 2603, payload: 00"
+		reply "200119,delay 5000,2602": "command: 2603, payload: 19"
+		reply "200132,delay 5000,2602": "command: 2603, payload: 32"
+		reply "20014B,delay 5000,2602": "command: 2603, payload: 4B"
+		reply "200163,delay 5000,2602": "command: 2603, payload: 63"
+	}
+
+	preferences {
+		input "ledIndicator", "bool", title: "LED on when light on", description: "LED will be on when light OFF if not set", required: false, defaultValue: false
+		input "invertSwitch", "bool", title: "Invert Switch", description: "Flip switch upside down", required: false, defaultValue: false
+  }
+
+	tiles(scale: 2) {
+		multiAttributeTile(name:"switch", type: "lighting", width: 6, height: 4, canChangeIcon: true){
+			tileAttribute ("device.switch", key: "PRIMARY_CONTROL") {
+				attributeState "on", label:'${name}', action:"switch.off", icon:"st.switches.light.on", backgroundColor:"#79b821", nextState:"turningOff"
+				attributeState "off", label:'${name}', action:"switch.on", icon:"st.switches.light.off", backgroundColor:"#ffffff", nextState:"turningOn"
+				attributeState "turningOn", label:'${name}', action:"switch.off", icon:"st.switches.light.on", backgroundColor:"#79b821", nextState:"turningOff"
+				attributeState "turningOff", label:'${name}', action:"switch.on", icon:"st.switches.light.off", backgroundColor:"#ffffff", nextState:"turningOn"
+			}
+			tileAttribute ("device.level", key: "SLIDER_CONTROL") {
+				attributeState "level", action:"switch level.setLevel"
+			}
+		}
+
+		standardTile("refresh", "device.switch", width: 2, height: 2, inactiveLabel: false, decoration: "flat") {
+			state "default", label:'', action:"refresh.refresh", icon:"st.secondary.refresh"
+		}
+
+		valueTile("level", "device.level", inactiveLabel: false, decoration: "flat", width: 2, height: 2) {
+			state "level", label:'${currentValue} %', unit:"%", backgroundColor:"#ffffff"
+		}
+
+		main(["switch"])
+		details(["switch", "level", "refresh"])
+
+	}
+}
+
+private getCommandClassVersions() {
+	[
+		0x59: 1,  // AssociationGrpInfo
+		0x85: 2,  // Association
+		0x5A: 1,  // DeviceResetLocally
+		0x72: 2,  // ManufacturerSpecific
+		0x73: 1,  // Powerlevel
+		0x86: 2,  // Version
+		0x5E: 2,  // ZwaveplusInfo
+		0x27: 1,  // All Switch
+		0x26: 1,  // Multilevel Switch
+		0x70: 1,  // Configuration
+	]
+}
+
+def configure() {
+	log.debug "configure()"
+	def cmds = []
+
+	cmds << new physicalgraph.device.HubAction(zwave.manufacturerSpecificV2.manufacturerSpecificGet())
+	cmds << new physicalgraph.device.HubAction(zwave.configurationV1.configurationGet(parameterNumber: 1).format())
+	cmds << new physicalgraph.device.HubAction(zwave.configurationV1.configurationGet(parameterNumber: 2).format())
+	cmds << new physicalgraph.device.HubAction(zwave.manufacturerSpecificV2.manufacturerSpecificGet().format())
+	sendHubCommand(cmds, 1500)
+}
+
+def updated(){
+	log.debug "Updated with settings: ${settings}"
+	def commands = []
+	commands << new physicalgraph.device.HubAction(zwave.configurationV1.configurationSet(configurationValue: [ledIndicator == true ? 1 : 0], parameterNumber: 2, size: 1).format())
+	commands << new physicalgraph.device.HubAction(zwave.configurationV1.configurationSet(configurationValue: [invertSwitch == true ? 1 : 0], parameterNumber: 1, size: 1).format())
+	commands << new physicalgraph.device.HubAction(zwave.configurationV1.configurationGet(parameterNumber: 1).format())
+	commands << new physicalgraph.device.HubAction(zwave.configurationV1.configurationGet(parameterNumber: 2).format())
+	sendHubCommand(commands, 1500)
+// Device-Watch simply pings if no device events received for 32min(checkInterval)
+	sendEvent(name: "checkInterval", value: 2 * 15 * 60 + 2 * 60, displayed: false, data: [protocol: "zwave", hubHardwareId: device.hub.hardwareID])
+}
+
+def parse(String description) {
+	def result = null
+    // Special routine for firmware bug - see Notes1
+    if (description.indexOf('command: 7006, payload: 02 02') > -1) {
+    description = description + "00 "
+    }
+    // end special routine
+	if (description != "updated") {
+		log.debug "parse() >> zwave.parse($description)"
+		def cmd = zwave.parse(description, commandClassVersions)
+		if (cmd) {
+			result = zwaveEvent(cmd)
+		}
+	}
+	if (result?.name == 'hail' && hubFirmwareLessThan("000.011.00602")) {
+		result = [result, response(zwave.basicV1.basicGet())]
+		log.debug "Was hailed: requesting state update"
+	} else {
+		log.debug "Parse returned ${result?.descriptionText}"
+	}
+	return result
+}
+
+def zwaveEvent(physicalgraph.zwave.commands.basicv1.BasicReport cmd) {
+	dimmerEvents(cmd)
+}
+
+def zwaveEvent(physicalgraph.zwave.commands.basicv1.BasicSet cmd) {
+	dimmerEvents(cmd)
+}
+
+def zwaveEvent(physicalgraph.zwave.commands.switchmultilevelv1.SwitchMultilevelReport cmd) {
+	dimmerEvents(cmd)
+}
+
+def zwaveEvent(physicalgraph.zwave.commands.switchmultilevelv1.SwitchMultilevelSet cmd) {
+	dimmerEvents(cmd)
+}
+
+private dimmerEvents(physicalgraph.zwave.Command cmd) {
+	def value = (cmd.value ? "on" : "off")
+	def result = [createEvent(name: "switch", value: value)]
+	if (cmd.value && cmd.value <= 100) {
+		result << createEvent(name: "level", value: cmd.value, unit: "%")
+	}
+	return result
+}
+
+def zwaveEvent(physicalgraph.zwave.commands.configurationv1.ConfigurationReport cmd) {
+	def name = ""
+    def value = ""
+    def reportValue = cmd.configurationValue[0]
+    log.debug "---CONFIGURATION REPORT V1--- ${device.displayName} parameter ${cmd.parameterNumber} with a byte size of ${cmd.size} is set to ${cmd.configurationValue}"
+    switch (cmd.parameterNumber) {
+        case 1:
+            name = "topon"
+            value = reportValue == 1 ? "true" : "false"
+            break
+        case 2:
+            name = "ledfollow"
+            value = reportValue == 1 ? "true" : "false"
+            break
+        default:
+            break
+    }
+	createEvent([name: name, value: value])
+}
+
+def zwaveEvent(physicalgraph.zwave.commands.hailv1.Hail cmd) {
+	createEvent([name: "hail", value: "hail", descriptionText: "Switch button was pressed", displayed: false])
+}
+
+def zwaveEvent(physicalgraph.zwave.commands.manufacturerspecificv2.ManufacturerSpecificReport cmd) {
+	log.debug "manufacturerId:   ${cmd.manufacturerId}"
+	log.debug "productId:        ${cmd.productId}"
+	log.debug "productTypeId:    ${cmd.productTypeId}"
+	def msr = String.format("%04X-%04X-%04X", cmd.manufacturerId, cmd.productTypeId, cmd.productId)
+	updateDataValue("MSR", msr)
+	updateDataValue("manufacturer", "Zooz")
+	createEvent([descriptionText: "$device.displayName MSR: $msr", isStateChange: false])
+}
+
+def zwaveEvent(physicalgraph.zwave.commands.switchmultilevelv1.SwitchMultilevelStopLevelChange cmd) {
+	[createEvent(name:"switch", value:"on"), response(zwave.switchMultilevelV1.switchMultilevelGet().format())]
+}
+
+def zwaveEvent(physicalgraph.zwave.Command cmd) {
+	// Handles all Z-Wave commands we aren't interested in
+	[:]
+}
+
+def on() {
+	delayBetween([
+			zwave.basicV1.basicSet(value: 0xFF).format(),
+			zwave.switchMultilevelV1.switchMultilevelGet().format()
+	],5000)
+}
+
+def off() {
+	delayBetween([
+			zwave.basicV1.basicSet(value: 0x00).format(),
+			zwave.switchMultilevelV1.switchMultilevelGet().format()
+	],5000)
+}
+
+def setLevel(value) {
+	log.debug "setLevel >> value: $value"
+	def valueaux = value as Integer
+	def level = Math.max(Math.min(valueaux, 99), 0)
+	if (level > 0) {
+		sendEvent(name: "switch", value: "on")
+	} else {
+		sendEvent(name: "switch", value: "off")
+	}
+	sendEvent(name: "level", value: level, unit: "%")
+	delayBetween ([zwave.basicV1.basicSet(value: level).format(), zwave.switchMultilevelV1.switchMultilevelGet().format()], 5000)
+}
+
+def setLevel(value, duration) {
+	log.debug "setLevel >> value: $value, duration: $duration"
+	def valueaux = value as Integer
+	def level = Math.max(Math.min(valueaux, 99), 0)
+	def dimmingDuration = duration < 128 ? duration : 128 + Math.round(duration / 60)
+	def getStatusDelay = duration < 128 ? (duration*1000)+2000 : (Math.round(duration / 60)*60*1000)+2000
+	delayBetween ([zwave.switchMultilevelV2.switchMultilevelSet(value: level, dimmingDuration: dimmingDuration).format(),
+				   zwave.switchMultilevelV1.switchMultilevelGet().format()], getStatusDelay)
+}
+
+def poll() {
+	zwave.switchMultilevelV1.switchMultilevelGet().format()
+}
+
+/**
+ * PING is used by Device-Watch in attempt to reach the Device
+ * */
+def ping() {
+	refresh()
+}
+
+def refresh() {
+	log.debug "refresh() is called"
+	def commands = []
+	commands << zwave.switchMultilevelV1.switchMultilevelGet().format()
+	if (getDataValue("MSR") == null) {
+		commands << zwave.manufacturerSpecificV1.manufacturerSpecificGet().format()
+	}
+	delayBetween(commands,100)
+}
