@@ -1,7 +1,7 @@
 /**
  *  Zooz Zen22 Dimmer Switch
+ *
  *  Date: 2017-2-10
- *  Copyright 2017, Don Caruana
  *  Supported Command Classes
  *  
  *         Association v2
@@ -15,18 +15,16 @@
  *         Version v2
  *         ZWavePlus Info v2
  *  
- *   Parm Size Description               Value
- *      1    1 Invert Switch             0 (Default)-Upper paddle turns light on, 1-Lower paddle turns light on
- *      2    1 LED Indicator             0 (Default)-LED is on when light is OFF, 1-LED is on when light is ON
- *   Note1: There is a bug in this device in that it reports the length of parameter 2 as 2, then only sends one value byte. 
- *          Attempting to retrieve that parameter will result in this error: 
- *          Exception 'java.lang.IndexOutOfBoundsException: toIndex = 4' encountered parsing 'cmd: 7006, payload: 02 02 00'
+ *   Parm Size Description                                   Value
+ *      1    1 Invert Switch                                 0 (Default)-Upper paddle turns light on, 1-Lower paddle turns light on
+ *      2    1 LED Indicator                                 0 (Default)-LED is on when light is OFF, 1-LED is on when light is ON
+ *   Note1: There is a bug in this device in that it reports the length of parameter 2 as 2, then only sends one value byte. Attempting to retrieve that
+ *          parameter will result in this error: Exception 'java.lang.IndexOutOfBoundsException: toIndex = 4' encountered parsing 'cmd: 7006, payload: 02 02 00'
  *          The toIndex indicates that it fails looking for the 4th byte of the payload (the 2nd byte is the length).
- *          The simple workaround is to just look for a configuration report on parameter 2 and add a byte to the returned 
- *          description. The 2nd byte is the least significant byte anyway and also is just not processed in the 
- *          ConfigurationReport routine. Live logging will show the above error, but otherwise the device and handler work fine.
- *   Note2: Configuration is not officially documented as a command class for this device but it is and must be available to 
- *          use parameters
+ *          The simple workaround is to just look for a configuration report on parameter 2 and add a byte to the returned description. The 2nd byte is the least
+ *          significant byte anyway and also is just not processed in the ConfigurationReport routine. Live logging will show the above error, but otherwise the
+ *          device and handler work fine.
+ *   Note2: Configuration is not officially documented as a command class for this device but it is and must be available to use parameters
  */
 metadata {
 	definition (name: "Zooz Zen22 Dimmer Switch", namespace: "doncaruana", author: "Don Caruana") {
@@ -100,11 +98,11 @@ private getCommandClassVersions() {
 		0x5A: 1,  // DeviceResetLocally
 		0x72: 2,  // ManufacturerSpecific
 		0x73: 1,  // Powerlevel
-		0x86: 2,  // Version
+		0x86: 1,  // Version
 		0x5E: 2,  // ZwaveplusInfo
 		0x27: 1,  // All Switch
 		0x26: 1,  // Multilevel Switch
-		0x70: 1,  // Configuration
+        0x70: 1,  // Configuration
 	]
 }
 
@@ -112,36 +110,40 @@ def configure() {
 	log.debug "configure()"
 	def cmds = []
 
-	cmds << new physicalgraph.device.HubAction(zwave.manufacturerSpecificV2.manufacturerSpecificGet())
-	cmds << new physicalgraph.device.HubAction(zwave.configurationV1.configurationGet(parameterNumber: 1).format())
-	cmds << new physicalgraph.device.HubAction(zwave.configurationV1.configurationGet(parameterNumber: 2).format())
-	cmds << new physicalgraph.device.HubAction(zwave.manufacturerSpecificV2.manufacturerSpecificGet().format())
-	sendHubCommand(cmds, 1500)
+	cmds << mfrGet()
+    cmds << zwave.versionV1.versionGet().format()
+	cmds << parmGet(1)
+	cmds << parmGet(2)
+    return response(delayBetween(cmds,200))
 }
 
 def updated(){
-	log.debug "Updated with settings: ${settings}"
-	def commands = []
-	commands << new physicalgraph.device.HubAction(zwave.configurationV1.configurationSet(configurationValue: [ledIndicator == true ? 1 : 0], parameterNumber: 2, size: 1).format())
-	commands << new physicalgraph.device.HubAction(zwave.configurationV1.configurationSet(configurationValue: [invertSwitch == true ? 1 : 0], parameterNumber: 1, size: 1).format())
-	commands << new physicalgraph.device.HubAction(zwave.configurationV1.configurationGet(parameterNumber: 1).format())
-	commands << new physicalgraph.device.HubAction(zwave.configurationV1.configurationGet(parameterNumber: 2).format())
-	sendHubCommand(commands, 1500)
-// Device-Watch simply pings if no device events received for 32min(checkInterval)
-	sendEvent(name: "checkInterval", value: 2 * 15 * 60 + 2 * 60, displayed: false, data: [protocol: "zwave", hubHardwareId: device.hub.hardwareID])
+    // For some reason, this ends up getting run twice in a row, so if it executes twice within a second, just ignore the second run
+    if(now() - state.lastupdate > 1000){
+		def commands = []
+        //parmset takes the parameter number, it's size, and the value - in that order
+    	commands << parmSet(2, 1, [ledIndicator == true ? 1 : 0])
+    	commands << parmSet(1, 1, [invertSwitch == true ? 1 : 0])
+    	commands << parmGet(1)
+    	commands << parmGet(2)
+		// Device-Watch simply pings if no device events received for 32min(checkInterval)
+		sendEvent(name: "checkInterval", value: 2 * 15 * 60 + 2 * 60, displayed: false, data: [protocol: "zwave", hubHardwareId: device.hub.hardwareID])
+    	state.lastupdate = now()
+    	return response(delayBetween(commands, 500))
+    }
 }
 
 def parse(String description) {
 	def result = null
-    // Special routine for firmware bug - see Notes1
+    // Special routine for firmware bug - see Notes
     if (description.indexOf('command: 7006, payload: 02 02') > -1) {
     description = description + "00 "
     }
     // end special routine
 	if (description != "updated") {
-		log.debug "parse() >> zwave.parse($description)"
 		def cmd = zwave.parse(description, commandClassVersions)
 		if (cmd) {
+            log.debug "in cmd"
 			result = zwaveEvent(cmd)
 		}
 	}
@@ -199,6 +201,7 @@ def zwaveEvent(physicalgraph.zwave.commands.configurationv1.ConfigurationReport 
 	createEvent([name: name, value: value])
 }
 
+
 def zwaveEvent(physicalgraph.zwave.commands.hailv1.Hail cmd) {
 	createEvent([name: "hail", value: "hail", descriptionText: "Switch button was pressed", displayed: false])
 }
@@ -207,7 +210,8 @@ def zwaveEvent(physicalgraph.zwave.commands.manufacturerspecificv2.ManufacturerS
 	log.debug "manufacturerId:   ${cmd.manufacturerId}"
 	log.debug "productId:        ${cmd.productId}"
 	log.debug "productTypeId:    ${cmd.productTypeId}"
-	def msr = String.format("%04X-%04X-%04X", cmd.manufacturerId, cmd.productTypeId, cmd.productId)
+	log.debug "manufacturerName: ${cmd.manufacturerName}"
+    def msr = String.format("%04X-%04X-%04X", cmd.manufacturerId, cmd.productTypeId, cmd.productId)
 	updateDataValue("MSR", msr)
 	updateDataValue("manufacturer", "Zooz")
 	createEvent([descriptionText: "$device.displayName MSR: $msr", isStateChange: false])
@@ -275,7 +279,37 @@ def refresh() {
 	def commands = []
 	commands << zwave.switchMultilevelV1.switchMultilevelGet().format()
 	if (getDataValue("MSR") == null) {
-		commands << zwave.manufacturerSpecificV1.manufacturerSpecificGet().format()
+		commands << mfrGet()
 	}
 	delayBetween(commands,100)
+}
+
+def parmSet(parmnum, parmsize, parmval) {
+  return zwave.configurationV1.configurationSet(configurationValue: parmval, parameterNumber: parmnum, size: parmsize).format()
+}
+
+def parmGet(parmnum) {
+  return zwave.configurationV1.configurationGet(parameterNumber: parmnum).format()
+}
+
+def mfrGet() {
+  return zwave.manufacturerSpecificV2.manufacturerSpecificGet().format()
+}
+
+def zwaveEvent(physicalgraph.zwave.commands.versionv1.VersionReport cmd) {	
+    updateDataValue("applicationVersion", "${cmd.applicationVersion}")
+	updateDataValue("applicationSubVersion", "${cmd.applicationSubVersion}")
+	updateDataValue("zWaveLibraryType", "${cmd.zWaveLibraryType}")
+	updateDataValue("zWaveProtocolVersion", "${cmd.zWaveProtocolVersion}")
+   	updateDataValue("zWaveProtocolSubVersion", "${cmd.zWaveProtocolSubVersion}")
+}
+
+def zwaveEvent(physicalgraph.zwave.commands.versionv1.VersionCommandClassReport cmd) {
+log.debug "vccr"
+def rcc = ""
+log.debug "version: ${cmd.commandClassVersion}"
+log.debug "class: ${cmd.requestedCommandClass}"
+rcc = Integer.toHexString(cmd.requestedCommandClass.toInteger()).toString() 
+log.debug "${rcc}"
+if (cmd.commandClassVersion > 0) {log.debug "0x${rcc}_V${cmd.commandClassVersion}"}
 }
