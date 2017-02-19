@@ -1,8 +1,9 @@
 /**
  *  Strips by Sensative
+ *  Device Handler by Don Caruana
  *
  *  Date: 2017-2-19
- *  Supported Command Classes
+ *  Supported Command Classes per device specs
  *  
  *         Association v2
  *         Association Group Information
@@ -34,10 +35,7 @@ metadata {
 	capability "Sensor"
 	capability "Refresh"
 		attribute  "needUpdate", "string"
-		
-		
-// 	zw:S type:0701 mfr:019A prod:0003 model:0003 ver:10.06 zwv:4.05 lib:06 cc:5E,86,72,30,70,71,5A,85,59,80,84,73 role:06 ff:8C07 ui:8C07
-       
+     
     fingerprint mfr:"019A", prod:"0003", model:"0003", deviceJoinName:"Strips by Sensative"
     fingerprint deviceId:"0x0701", inClusters: "0x5E,0x86,0x72,0x30,0x70,0x71,0x5A,0x85,0x59,0x80,0x84,0x73"
     fingerprint cc: "0x5E,0x86,0x72,0x30,0x70,0x71,0x5A,0x85,0x59,0x80,0x84,0x73", mfr:"019A", prod:"0003", model:"0003", deviceJoinName:"Strips by Sensative"
