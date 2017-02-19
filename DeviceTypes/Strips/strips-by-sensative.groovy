@@ -118,14 +118,15 @@ def configure() {
 
 	log.debug "Listing all device parameters and defaults since this is a new inclusion"
 
-	commands << zwave.wakeUpV1.wakeUpIntervalSet(seconds: state.wakeupInterval.toInteger(), nodeid:zwaveHubNodeId).format()
 	commands << zwave.manufacturerSpecificV1.manufacturerSpecificGet().format()
 	commands << zwave.versionV1.versionGet().format()
 	commands << zwave.batteryV1.batteryGet().format()
+	commands << zwave.wakeUpV1.wakeUpIntervalSet(seconds: state.wakeupInterval.toInteger(), nodeid:zwaveHubNodeId).format()
 	commands << zwave.configurationV1.configurationGet(parameterNumber: 1).format()
 	commands << zwave.configurationV1.configurationGet(parameterNumber: 2).format()
 //  commands << zwave.wakeUpV1.wakeUpIntervalGet().format()
-	delayBetween(commands, 1000)
+	commands << zwave.wakeUpV1.wakeUpNoMoreInformation().format()
+	delayBetween(commands, 1500)
 }
 
 
@@ -340,7 +341,7 @@ def zwaveEvent(physicalgraph.zwave.commands.notificationv3.NotificationReport cm
 }
 
 def zwaveEvent(physicalgraph.zwave.commands.wakeupv1.WakeUpNotification cmd) {
-	def event = createEvent(name: "WakeUp", value: "Auto Wakeup", descriptionText: "${device.displayName} woke up", isStateChange: true, displayed: false)
+	def event = createEvent(name: "WakeUp", value: "Auto Wakeup", descriptionText: "${device.displayName} woke up", isStateChange: true, displayed: true)
 	def cmds = []
 
 	if (!device.currentState("ManufacturerCode")) {
