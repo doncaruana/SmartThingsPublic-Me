@@ -446,8 +446,6 @@ def refresh() {
 def zwaveEvent(physicalgraph.zwave.commands.versionv1.VersionReport cmd) {
  	def appversion = String.format("%02d.%02d", cmd.applicationVersion, cmd.applicationSubVersion)
  	def zprotoversion = String.format("%d.%02d", cmd.zWaveProtocolVersion, cmd.zWaveProtocolSubVersion)
-
- 	def zprotoversion = cmd.zWaveProtocolVersion.toString() + "." + cmd.zWaveProtocolSubVersion.toString()
 	updateDataValue("zWave Library", cmd.zWaveLibraryType.toString())
 	updateDataValue("Firmware", appversion)
 	updateDataValue("zWave Version", zprotoversion)
