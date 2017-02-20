@@ -12,7 +12,8 @@ if there are changes pending and say "Synced" otherwise. If you revert your pref
 device before the next wakeup, it will go back to "Synced". Only changed preferences are pushed to the device.
 
 The actual wakeup by the device is approximately 90% of the wakeupinterval setting. I've adjusted the numbers so that
-the desired interval is set when you use preferences.
+the desired interval is set when you use preferences. Also, the wakeupinterval has a minimum of 1800 and a maximum of 
+86400 and must be set at 60 second increments. 
 
 In the Strips internal software, there is a "failed"counter - when a number of events fail between the device and 
 the z-wave chip, the microcontroller assumes it is because of the battery and reports "Battery LOW".
