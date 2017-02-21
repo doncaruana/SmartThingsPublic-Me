@@ -11,9 +11,9 @@ Preferences with an asterisk have to wait for the next wakeup, automatic or manu
 if there are changes pending and say "Synced" otherwise. If you revert your preferences to values that match the
 device before the next wakeup, it will go back to "Synced". Only changed preferences are pushed to the device.
 
-The actual wakeup by the device is approximately 90% of the wakeupinterval setting. I've adjusted the numbers so that
-the desired interval is set when you use preferences. Also, the wakeupinterval has a minimum of 1800 and a maximum of 
-86400 and must be set at 60 second increments. 
+The actual wakeup by the device is approximately 90% of the wakeupinterval setting. So the observed wakeup interval
+will be a little less than the setting. Also, the wakeupinterval has a minimum of 1800 and a maximum of 86400 and 
+must be set at 60 second increments. 
 
 A tamper notification is sent in 2 cases:
 - Putting a magnet on the round edge when there is a magnet on the square one triggers tamper 
@@ -22,5 +22,3 @@ A tamper notification is sent in 2 cases:
 The tamper event time can be cleared by just tapping on the time itself. Tamper events are reported so they can be 
 seen historyically in the GUI.
 
-If you need to do a manual wakeup to sync preferences, you need to toggle the setting "Alow Manual Wakeup" in
-preferences. Otherwise, it will just send a tamper.
