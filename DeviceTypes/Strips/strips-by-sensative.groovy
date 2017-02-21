@@ -84,8 +84,8 @@ metadata {
 			state "tamper", label:'${currentValue}', backgroundColor:"#ffffff", action:"refresh.refresh"
 		}
 		standardTile("configure", "device.needUpdate", inactiveLabel: false, width: 2, height: 2) {
-			state "NO" , label:'Synced', action:"configuration.configure", icon:"st.secondary.refresh-icon", backgroundColor:"#99CC33"
-			state "YES", label:'Pending', action:"configuration.configure", icon:"st.secondary.refresh-icon", backgroundColor:"#CCCC33"
+			state "NO" , label:'Synced', icon:"st.secondary.refresh-icon", backgroundColor:"#99CC33"
+			state "YES", label:'Pending', icon:"st.secondary.refresh-icon", backgroundColor:"#CCCC33"
     }
 		valueTile("battery", "device.battery", decoration: "flat", inactiveLabel: false, width: 2, height: 2) {
 			state "battery", label:'${currentValue}% battery', unit:""
