@@ -52,22 +52,23 @@ metadata {
 			displayDuringSetup: false
 		input "sendType", "enum", 
 			title: "*Reporting Type",
+			description: "Notification",
 			options:["binary": "Binary", "notification": "Notification", "basic": "Basic"],
 			defaultValue: "notification",
 			displayDuringSetup: false
-		input "invertOutput", "bool", 
-			title: "Invert open/closed reporting",
-			defaultValue: false,
-			displayDuringSetup: false
 		input "wakeupInterval","enum",
 			title: "*Device Wakeup Interval",
-			description: "A value in seconds.",
+			description: "24 hours",
 			defaultValue: "86400",
 			required: false,
 			displayDuringSetup: false,
 			options: buildInterval()
-		input "allowWakeup", "bool", 
-			title: "Allow manual wakeup",
+		input "ignoreWakeup", "bool", 
+			title: "Ignore manual wakeup",
+			defaultValue: false,
+			displayDuringSetup: false
+		input "invertOutput", "bool", 
+			title: "Invert open/closed reporting",
 			defaultValue: false,
 			displayDuringSetup: false
 	}
@@ -305,14 +306,12 @@ def zwaveEvent(physicalgraph.zwave.commands.notificationv3.NotificationReport cm
 				result << response(secure(zwave.manufacturerSpecificV1.manufacturerSpecificGet()))
 			}
 		} else if (cmd.event == 0x04) {
-				if (allowWakeup) {
+				def timeString1 = new Date().format("MMM d yyyy", location.timeZone)
+				def timeString2 = new Date().format("hh:mm:ss", location.timeZone)
+				result << createEvent(name: "tamper", value: "Tamper at \n${timeString1}\n${timeString2}", descriptionText: "$device.displayName was tampered with at ${timeString1} ${timeString2}")
+				if (!ignoreWakeup) {
 					sendEvent(name:"WakeUp", value: "Manual Wakeup", descriptionText: "${device.displayName} woke up", isStateChange: true, displayed: true)
 					result << doWakeup()
-				}
-				else {
-					def timeString1 = new Date().format("MMM d yyyy", location.timeZone)
-					def timeString2 = new Date().format("hh:mm:ss", location.timeZone)
-					result << createEvent(name: "tamper", value: "Tamper at \n${timeString1}\n${timeString2}", descriptionText: "$device.displayName was tampered with at ${timeString1} ${timeString2}")
 				}
 		} else if (cmd.event == 0x05 || cmd.event == 0x06) {
 			result << createEvent(descriptionText: "$device.displayName detected glass breakage", isStateChange: true)
@@ -394,24 +393,23 @@ private secureSequence(commands, delay=200) {
 	delayBetween(commands.collect{ secure(it) }, delay)
 }
 
-// Strips actual wakeup time is 90% of the setting, so the values below are adjusted so the desired time interval is obtained. The minimum is 30 minutes
 def buildInterval() {
-
 	def intervalList = []
-	intervalList << [ "2040" : "30 minutes" ]
-	intervalList << [ "4020" : "1 hour" ]
-	intervalList << [ "8040" : "2 hours" ]
-	intervalList << [ "12000" : "3 hours" ]
-	intervalList << [ "16020" : "4 hours" ]
-	intervalList << [ "20040" : "5 hours" ]
-	intervalList << [ "24000" : "6 hours" ]
-	intervalList << [ "40020" : "10 hours" ]
-	intervalList << [ "48000" : "12 hours" ]
-	intervalList << [ "86400" : "21 hours, 36 minutes" ]
+	intervalList << [ "1800" : "30 minutes" ]
+	intervalList << [ "3600" : "1 hour" ]
+	intervalList << [ "7200" : "2 hours" ]
+	intervalList << [ "10800" : "3 hours" ]
+	intervalList << [ "14400" : "4 hours" ]
+	intervalList << [ "18000" : "5 hours" ]
+	intervalList << [ "21600" : "6 hours" ]
+	intervalList << [ "36000" : "10 hours" ]
+	intervalList << [ "43200" : "12 hours" ]
+	intervalList << [ "86400" : "24 hours" ]
 }
 
 def doWakeup() {	
 	def cmds = []
+	cmds << "delay 2000"
 	if (device.currentValue("needUpdate") == "YES") { cmds += update_settings() }
 	cmds << zwave.wakeUpV2.wakeUpNoMoreInformation().format()
 	return response(cmds)
