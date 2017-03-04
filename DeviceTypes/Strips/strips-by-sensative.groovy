@@ -67,10 +67,6 @@ metadata {
 			title: "Ignore manual wakeup",
 			defaultValue: false,
 			displayDuringSetup: false
-		input "invertOutput", "bool", 
-			title: "Invert open/closed reporting",
-			defaultValue: false,
-			displayDuringSetup: false
 	}
 
 	tiles(scale: 2) {
@@ -255,13 +251,6 @@ def zwaveEvent(physicalgraph.zwave.commands.securityv1.SecurityMessageEncapsulat
 }
 
 def sensorValueEvent(value) {
-	//If the invertOutput parameter is set, logically invert the output value
-	def flip = 0
-	if (state.sendType == "notification"){
-		flip = value ^ 0x1}
-	else{
-		flip = value ^ 0xFF}
-  if (invertOutput) {value = flip}
 	if (value) {
 		createEvent(name: "contact", value: "open", descriptionText: "$device.displayName is open")
 	} else {
