@@ -20,5 +20,5 @@ A tamper notification is sent in 2 cases:
 - During a Manual Wake Up, a tamper is sent before the Node Info. 
 
 The tamper event time can be cleared by just tapping on the time itself. Tamper events are reported so they can be 
-seen historyically in the GUI.
+seen historically in the GUI.
 
