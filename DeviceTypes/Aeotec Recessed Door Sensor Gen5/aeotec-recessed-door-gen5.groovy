@@ -79,7 +79,7 @@ metadata {
 		input "wakeupInterval",
         	"enum",
             title: "*Device Wakeup Interval",
-            description: "24 hours",
+            description: "4 hours",
             defaultValue: "14400",
             required: false,
             displayDuringSetup: false,
@@ -231,28 +231,24 @@ def update_settings()
 	def cmds = []
 	def isUpdateNeeded = "NO"
 	if (state.wakeupInterval != wakeupInterval){
-		// can't read the wakeup interval, so just set it to the pref value here
 		state.wakeupInterval = wakeupInterval
+        log.debug "wui: $wakeupInterval"
 		cmds << zwave.wakeUpV1.wakeUpIntervalSet(seconds: wakeupInterval.toInteger(), nodeid:zwaveHubNodeId)
 		cmds << zwave.wakeUpV1.wakeUpIntervalGet()
 	}
 	if (sendType != state.sendType){
-		cmds << zwave.configurationV1.configurationSet(parameterNumber: 121, size: 4, scaledConfigurationValue: [sendType == "binary" ? 16 : sendType == "basic" ? 256 : 272])
-		cmds << "delay 1000"
+		cmds << zwave.configurationV1.configurationSet(parameterNumber: 121, size: 4, configurationValue: [sendType == "binary" ? 16 : sendType == "basic" ? 256 : 272])
 		cmds << zwave.configurationV1.configurationGet(parameterNumber: 121)
 	}
 	if (lowBatteryCheck != state.lowBatteryCheck){
 		cmds << zwave.configurationV1.configurationSet(parameterNumber: 101, size: 1, configurationValue: [(lowBatteryCheck) ? 1 : 0])
-		cmds << "delay 1000"
 		cmds << zwave.configurationV1.configurationGet(parameterNumber: 101)
 	}
 	if (batteryInterval != state.batteryInterval){
 		cmds << zwave.configurationV1.configurationSet(parameterNumber: 111, size: 4, scaledConfigurationValue: batteryInterval.toInteger())
-		cmds << "delay 1000"
 		cmds << zwave.configurationV1.configurationGet(parameterNumber: 111)
 	}
   cmds = secureSequence(cmds, 1000)
-	cmds << "delay 3000"
   sendEvent(name:"needUpdate", value: isUpdateNeeded, displayed:false, isStateChange: true)
   return cmds
 }
