@@ -6,7 +6,7 @@ There are some important differences between this and the previous version.
 
 First, the firmware bug has been fixed! But, more importantly, this will now work with a REGULAR 3 way switch and existing wiring! The other 3 way switch just becomes a toggle and will only control on/off but not dimming but it's a really nice feature!
 
-Also, the ability to turn off the LED completely if you like.
+Second, there is now the ability to turn off the LED completely if you like.
 
 And there is a very audible and tactile click on either paddle direction.
 
