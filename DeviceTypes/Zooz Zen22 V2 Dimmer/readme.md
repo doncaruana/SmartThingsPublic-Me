@@ -18,7 +18,7 @@ Single press on the top turns it on, single press on the bottom turns it off. Th
 
 There are 3 parameters for this device:
 
-Parameter 1 (1 byte) - Invert Switch - When on, this inverts the switch so that the bottom (side by the LED) actually turns the switch on. The default is for this to be off. 
+Parameter 1 (1 byte) - Invert Switch - When on, this inverts the switch so that the bottom (side by the LED) actually turns the switch on. The default is for this to be off.
 Parameter 2 (1 byte) - LED indicator - When this is turned on, the LED will follow the light and only be on when the light is on. Normal operation (parameter off) is that the LED is only on when the light is off
 Parameter 3 (1 byte) - LED Disable   - When this parameter is on, the LED light is completely disabled
 
