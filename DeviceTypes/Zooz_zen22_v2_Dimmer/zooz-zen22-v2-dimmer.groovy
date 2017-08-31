@@ -1,11 +1,12 @@
 /**
- *  Zooz Zen22 Dimmer Switch
+ *  Zooz Zen22 Dimmer v2 Switch
  *
  *  Date: 2017-8-29
  *  Supported Command Classes
  *  
  *         Association v2
  *         Association Group Information
+ *         Basic
  *         Configuration
  *         Device Reset Local
  *         Manufacturer Specific v2
@@ -14,7 +15,6 @@
  *         Switch_multilevel
  *         Version v2
  *         ZWavePlus Info v2
- *          COMMAND_CLASS_BASIC
  *  
  *   Parm Size Description                                   Value
  *      1    1 Invert Switch                                 0 (Default)-Upper paddle turns light on, 1-Lower paddle turns light on
