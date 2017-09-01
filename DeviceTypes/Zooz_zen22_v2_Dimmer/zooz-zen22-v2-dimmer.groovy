@@ -286,9 +286,6 @@ def refresh() {
 	log.debug "refresh() is called"
 	def commands = []
 	commands << zwave.switchMultilevelV1.switchMultilevelGet().format()
-//	if (getDataValue("MSR") == null) {
-		commands << mfrGet()
-//	}
 	delayBetween(commands,100)
 }
 
