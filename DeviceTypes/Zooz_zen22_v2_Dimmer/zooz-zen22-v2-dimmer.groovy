@@ -1,5 +1,5 @@
 /**
- *  Zooz Zen22 Dimmer v2 Switch
+ *  Zooz Zen22 Dimmer Switch
  *
  *  Date: 2017-8-29
  *  Supported Command Classes
@@ -103,8 +103,7 @@ private getCommandClassVersions() {
 	]
 }
 
-def configure() {
-	log.debug "configure()"
+def installed() {
 	def cmds = []
 
 	cmds << mfrGet()
@@ -112,14 +111,10 @@ def configure() {
 	cmds << parmGet(1)
 	cmds << parmGet(2)
 	cmds << parmGet(3)
-	cmds << mfrGet()
-  cmds << zwave.versionV1.versionGet().format()
   return response(delayBetween(cmds,200))
 }
 
 def updated(){
-  //    It seems the configure command doesn't run anymore, just updated on inclusion
-	log.debug "updated()"
 		def commands = []
    	if (getDataValue("MSR") == null) {
    		def level = 99
@@ -145,7 +140,6 @@ def parse(String description) {
 	if (description != "updated") {
 		def cmd = zwave.parse(description, commandClassVersions)
 		if (cmd) {
-            log.debug "in cmd"
 			result = zwaveEvent(cmd)
 		}
 	}
@@ -216,8 +210,8 @@ def zwaveEvent(physicalgraph.zwave.commands.manufacturerspecificv2.ManufacturerS
 	def manufacturerCode = String.format("%04X", cmd.manufacturerId)
 	def productTypeCode = String.format("%04X", cmd.productTypeId)
 	def productCode = String.format("%04X", cmd.productId)
-    def msr = manufacturerCode + "-" + productTypeCode + "-" + productCode
-    updateDataValue("MSR", msr)
+  def msr = manufacturerCode + "-" + productTypeCode + "-" + productCode
+  updateDataValue("MSR", msr)
 	updateDataValue("Manufacturer", "Zooz")
 	updateDataValue("Manufacturer ID", manufacturerCode)
 	updateDataValue("Product Type", productTypeCode)
@@ -285,6 +279,10 @@ def ping() {
 def refresh() {
 	log.debug "refresh() is called"
 	def commands = []
+   	if (getDataValue("MSR") == null) {
+		  commands << mfrGet()
+      commands << zwave.versionV1.versionGet().format()
+   	}
 	commands << zwave.switchMultilevelV1.switchMultilevelGet().format()
 	delayBetween(commands,100)
 }
