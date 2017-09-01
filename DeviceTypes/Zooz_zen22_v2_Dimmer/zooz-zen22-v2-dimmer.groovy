@@ -184,7 +184,7 @@ def zwaveEvent(physicalgraph.zwave.commands.configurationv1.ConfigurationReport 
     log.debug "---CONFIGURATION REPORT V1--- ${device.displayName} parameter ${cmd.parameterNumber} with a byte size of ${cmd.size} is set to ${cmd.configurationValue}"
     switch (cmd.parameterNumber) {
         case 1:
-            name = "topon"
+            name = "topoff"
             value = reportValue == 1 ? "true" : "false"
             break
         case 2:
